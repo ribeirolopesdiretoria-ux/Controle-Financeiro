@@ -4,73 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Controle Financeiro</title>
-  <style>
-    :root {
-      --bg: #0f172a;
-      --card: #111827;
-      --muted: #94a3b8;
-      --text: #e5e7eb;
-      --accent: #22c55e;
-      --danger: #ef4444;
-      --border: #1f2937;
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
-      background: linear-gradient(180deg, #0b1220, #0f172a 40%);
-      color: var(--text);
-    }
-    header {
-      padding: 24px 16px; max-width: 1100px; margin: 0 auto;
-    }
-    h1 { margin: 0 0 8px; font-size: 28px; }
-    .sub { color: var(--muted); font-size: 14px; }
-
-    .container { max-width: 1100px; margin: 0 auto; padding: 0 16px 48px; }
-    .grid {
-      display: grid; gap: 16px; grid-template-columns: 1fr; 
-    }
-    @media (min-width: 900px){ .grid { grid-template-columns: 1.1fr 1fr; } }
-
-    .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 16px; }
-    .card h2 { margin: 0 0 12px; font-size: 18px; }
-    label { font-size: 12px; color: var(--muted); display:block; margin-bottom:6px; }
-    input, select, button, textarea {
-      width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border);
-      background:#0b1220; color: var(--text);
-    }
-    input[type="number"] { text-align: right; }
-    .row { display:grid; grid-template-columns: 1fr; gap:12px; }
-    @media (min-width:640px){ .row{ grid-template-columns: repeat(6,1fr);} }
-    .col-2{ grid-column: span 2; } .col-3{ grid-column: span 3; } .col-4{ grid-column: span 4; } .col-6{ grid-column: span 6; }
-
-    .btn { cursor: pointer; border: 1px solid var(--border); transition: .2s ease; }
-    .btn:hover { transform: translateY(-1px); }
-    .btn-primary { background: #16a34a; border-color:#15803d; }
-    .btn-muted { background: #0b1220; }
-    .btn-danger { background: #991b1b; border-color:#7f1d1d; }
-
-    .summary { display:grid; grid-template-columns: repeat(3,1fr); gap:12px; }
-    .stat { background:#0b1220; border:1px dashed var(--border); padding:14px; border-radius:12px; }
-    .stat .label { color: var(--muted); font-size:12px; }
-    .stat .value { margin-top:6px; font-size:20px; }
-
-    table { width:100%; border-collapse: collapse; }
-    thead th { text-align:left; font-size:12px; color: var(--muted); padding:10px; border-bottom:1px solid var(--border); }
-    tbody td { padding:12px 10px; border-bottom:1px dashed var(--border); vertical-align: top; }
-    .right { text-align:right; }
-    .chip { padding:4px 8px; border-radius:999px; font-size:12px; border:1px solid var(--border); background:#0b1220; }
-    .chip.income { color:#22c55e; }
-    .chip.expense { color:#f87171; }
-
-    .actions { display:flex; gap:8px; justify-content:flex-end; }
-    .actions button { width:auto; padding:8px 10px; font-size:12px; }
-
-    footer { max-width:1100px; margin: 12px auto 40px; padding: 0 16px; color: var(--muted); font-size: 12px; }
-    .inline { display:flex; gap:8px; flex-wrap: wrap; }
-    .inline > * { flex: 1 1 160px; }
-    .hidden { display:none; }
-  </style>
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <header>
@@ -103,20 +37,22 @@
             <div class="col-3">
               <label for="category">Categoria</label>
               <div class="inline">
-                <select id="category" required>
-                  <option>Alimentação</option>
-                  <option>Moradia</option>
-                  <option>Transporte</option>
-                  <option>Lazer</option>
-                  <option>Saúde</option>
-                  <option>Salário</option>
-                  <option>Serviços</option>
-                  <option>Outros</option>
-                </select>
+                <select id="category" required></select>
                 <input id="newCat" type="text" placeholder="Adicionar categoria (opcional)" />
               </div>
             </div>
             <div class="col-3">
+              <label for="method">Forma de pagamento</label>
+              <select id="method" required>
+                <option>PIX</option>
+                <option>CARTÃO DE DÉBITO</option>
+                <option>CARTÃO DE CRÉDITO</option>
+                <option>BOLETO</option>
+                <option>TED</option>
+                <option>DÉBITO AUTOMÁTICO</option>
+              </select>
+            </div>
+            <div class="col-6">
               <label for="desc">Descrição</label>
               <input id="desc" type="text" placeholder="Ex.: Supermercado, Aluguel, Bônus" />
             </div>
@@ -131,14 +67,26 @@
       <section class="card">
         <h2>Filtros & Resumo</h2>
         <div class="row">
-          <div class="col-3">
+          <div class="col-2">
             <label for="month">Mês</label>
             <input id="month" type="month" />
           </div>
-          <div class="col-3">
+          <div class="col-2">
             <label for="fCat">Categoria</label>
             <select id="fCat">
               <option value="">Todas</option>
+            </select>
+          </div>
+          <div class="col-2">
+            <label for="fMethod">Forma de pagamento</label>
+            <select id="fMethod">
+              <option value="">Todas</option>
+              <option>PIX</option>
+              <option>CARTÃO DE DÉBITO</option>
+              <option>CARTÃO DE CRÉDITO</option>
+              <option>BOLETO</option>
+              <option>TED</option>
+              <option>DÉBITO AUTOMÁTICO</option>
             </select>
           </div>
           <div class="col-6">
@@ -175,13 +123,14 @@
     <!-- Tabela -->
     <section class="card" style="margin-top:16px;">
       <h2>Movimentações</h2>
-      <div style="overflow:auto;">
+      <div class="table-wrap">
         <table id="txTable">
           <thead>
             <tr>
               <th>Data</th>
               <th>Tipo</th>
               <th>Categoria</th>
+              <th>Forma</th>
               <th>Descrição</th>
               <th class="right">Valor</th>
               <th class="right">Ações</th>
@@ -198,13 +147,19 @@
   </footer>
 
   <script>
-    const storeKey = 'cf_transactions_v1';
+    const storeKey = 'cf_transactions_v2';
     const $ = (s) => document.querySelector(s);
 
     const state = {
-      transactions: [], // {id, type:'income'|'expense', date:'YYYY-MM-DD', category, desc, amountCents}
-      filters: { month: '', category: '', search: '' }
+      transactions: [], // {id, type, date, category, method, desc, amountCents}
+      filters: { month: '', category: '', method: '', search: '' }
     };
+
+    // Listas fixas
+    const CATEGORY_LIST = [
+      'ÁGUA','ALMOÇO','ALTOQI','ANIVERSÁRIO','ART','AUTODESK','CARRO','COMPRA TECNOLOGIA','CONSULTORIA ESPECIALIZADA','CUSTO ADM','DESPESAS','DESPESAS CARTÕES','ENERGIA','ENTRADA','FOLHA SALARIAL','GASOLINA','JANTAR','LIMPEZA','MANUTENÇÃO','TARIFA SICOOB','TERCEIRIZADO','UBER'
+    ];
+    const METHOD_LIST = ['PIX','CARTÃO DE DÉBITO','CARTÃO DE CRÉDITO','BOLETO','TED','DÉBITO AUTOMÁTICO'];
 
     // Utilidades
     const fmt = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
@@ -228,7 +183,8 @@
     }
 
     function categories(){
-      const base = new Set(['Alimentação','Moradia','Transporte','Lazer','Saúde','Salário','Serviços','Outros']);
+      // Fixa nas fornecidas, mas permite incluir novas via campo opcional
+      const base = new Set(CATEGORY_LIST);
       state.transactions.forEach(t => base.add(t.category));
       return Array.from(base).sort((a,b)=>a.localeCompare(b,'pt-BR'));
     }
@@ -236,20 +192,19 @@
     function refreshCategoryFilters(){
       const fCat = $('#fCat');
       fCat.innerHTML = '<option value="">Todas</option>' + categories().map(c=>`<option>${c}</option>`).join('');
-      // Seleciona se já havia filtro aplicado
       if(state.filters.category){ fCat.value = state.filters.category; }
-      // Também atualiza o select do formulário
       const catSel = $('#category');
       catSel.innerHTML = categories().map(c=>`<option>${c}</option>`).join('');
     }
 
     function applyFilters(list){
-      const { month, category, search } = state.filters;
+      const { month, category, method, search } = state.filters;
       return list.filter(t => {
         const inMonth = month ? t.date.startsWith(month) : true;
         const inCat = category ? t.category === category : true;
+        const inMethod = method ? t.method === method : true;
         const inSearch = search ? (t.desc || '').toLowerCase().includes(search.toLowerCase()) : true;
-        return inMonth && inCat && inSearch;
+        return inMonth && inCat && inMethod && inSearch;
       });
     }
 
@@ -273,6 +228,7 @@
           <td>${t.date.split('-').reverse().join('/')}</td>
           <td><span class="chip ${chipClass}">${t.type==='income'?'Receita':'Despesa'}</span></td>
           <td>${escapeHtml(t.category)}</td>
+          <td>${escapeHtml(t.method || '')}</td>
           <td>${escapeHtml(t.desc || '')}</td>
           <td class="right">${fmt.format(t.amountCents/100)}</td>
           <td class="right actions">
@@ -296,9 +252,10 @@
       let category = $('#category').value;
       const newCat = $('#newCat').value.trim();
       if(newCat){ category = newCat; $('#newCat').value=''; }
+      const method = $('#method').value;
       const desc = $('#desc').value.trim();
       if(!amountCents){ alert('Informe um valor válido.'); return; }
-      const tx = { id: uid(), type, date, category, desc, amountCents };
+      const tx = { id: uid(), type, date, category, method, desc, amountCents };
       state.transactions.push(tx);
       save();
       (e.target).reset();
@@ -321,13 +278,14 @@
         const desc = prompt('Descrição:', t.desc||''); if(desc===null) return;
         const amountStr = prompt('Valor (R$):', (t.amountCents/100).toFixed(2).replace('.', ',')); if(amountStr===null) return;
         const category = prompt('Categoria:', t.category); if(category===null) return;
+        const method = prompt('Forma de pagamento:', t.method||'PIX'); if(method===null) return;
         const date = prompt('Data (AAAA-MM-DD):', t.date); if(date===null) return;
         const type = prompt('Tipo (income/expense):', t.type); if(type===null) return;
         const amountCents = parseAmount(amountStr);
         if(!amountCents || (type!=='income' && type!=='expense') || !/^\d{4}-\d{2}-\d{2}$/.test(date)){
           alert('Dados inválidos. Edição cancelada.'); return;
         }
-        Object.assign(t, { desc, amountCents, category, date, type });
+        Object.assign(t, { desc, amountCents, category, method, date, type });
         save(); render();
       }
     }
@@ -341,12 +299,13 @@
     }
 
     function toCSV(list){
-      const header = ['id','tipo','data','categoria','descricao','valor'];
+      const header = ['id','tipo','data','categoria','forma_pagamento','descricao','valor'];
       const rows = list.map(t=>[
         t.id,
         t.type,
         t.date,
         '"'+String(t.category).replaceAll('"','""')+'"',
+        '"'+String(t.method||'').replaceAll('"','""')+'"',
         '"'+String(t.desc||'').replaceAll('"','""')+'"',
         (t.amountCents/100).toFixed(2).replace('.', ',')
       ].join(','));
@@ -359,6 +318,7 @@
 
     $('#month').addEventListener('input', e=>{ state.filters.month = e.target.value; render(); });
     $('#fCat').addEventListener('change', e=>{ state.filters.category = e.target.value; render(); });
+    $('#fMethod').addEventListener('change', e=>{ state.filters.method = e.target.value; render(); });
     $('#search').addEventListener('input', e=>{ state.filters.search = e.target.value; render(); });
 
     $('#btnExportCsv').addEventListener('click', ()=>{
@@ -375,7 +335,6 @@
       try{
         const arr = JSON.parse(text);
         if(!Array.isArray(arr)) throw new Error('Formato inválido');
-        // Normaliza e mescla sem duplicar IDs
         const ids = new Set(state.transactions.map(t=>t.id));
         arr.forEach(x=>{
           if(!x || typeof x!=='object') return;
@@ -383,7 +342,8 @@
             id: x.id || uid(),
             type: x.type==='income'?'income':'expense',
             date: /^\d{4}-\d{2}-\d{2}$/.test(x.date?String(x.date):'') ? x.date : new Date().toISOString().slice(0,10),
-            category: String(x.category||'Outros'),
+            category: String(x.category||x.categoria||'Outros'),
+            method: String(x.method||x.forma_pagamento||'PIX'),
             desc: String(x.desc||x.descricao||''),
             amountCents: Number.isFinite(x.amountCents) ? x.amountCents : parseAmount(x.valor||0)
           };
@@ -404,6 +364,11 @@
     // Inicialização
     load();
     ensureMonth();
+    // Preenche selects iniciais
+    (function initCategorySelect(){
+      const catSel = $('#category');
+      catSel.innerHTML = categories().map(c=>`<option>${c}</option>`).join('');
+    })();
     render();
   </script>
 </body>
