@@ -20,7 +20,7 @@
 <body>
   <header>
     <h1>Controle Financeiro</h1>
-    <div class="sub">Cadastre receitas e despesas, filtre por <b>ano e mês</b>, veja os maiores gastos em gráficos e exporte para Excel (.xls). Tudo salvo localmente (localStorage).</div>
+    <div class="sub">Cadastre <b>entradas</b> e <b>saídas</b>, filtre por <b>ano e mês</b>, veja os maiores gastos em gráficos e exporte para Excel (.xls). Tudo salvo localmente (localStorage).</div>
   </header>
 
   <div class="container">
@@ -33,8 +33,8 @@
             <div class="col-2">
               <label for="type">Tipo</label>
               <select id="type" required>
-                <option value="income">Receita</option>
-                <option value="expense">Despesa</option>
+                <option value="income">Entrada</option>
+                <option value="expense">Saída</option>
               </select>
             </div>
             <div class="col-2">
@@ -132,11 +132,11 @@
         </div>
         <div class="summary" style="margin-top:12px;">
           <div class="stat">
-            <div class="label">Receitas</div>
+            <div class="label">Entradas</div>
             <div id="sumIncome" class="value">R$ 0,00</div>
           </div>
           <div class="stat">
-            <div class="label">Despesas</div>
+            <div class="label">Saídas</div>
             <div id="sumExpense" class="value">R$ 0,00</div>
           </div>
           <div class="stat">
@@ -146,6 +146,21 @@
         </div>
       </section>
     </div>
+
+    <!-- Gráficos (agora acima das movimentações) -->
+    <section class="card" style="margin-top:16px;">
+      <h2>Maiores gastos (gráficos)</h2>
+      <div class="charts">
+        <div>
+          <canvas id="pieCanvas"></canvas>
+          <div id="pieLegend" class="legend"></div>
+        </div>
+        <div>
+          <canvas id="barCanvas"></canvas>
+          <div id="barLegend" class="legend"></div>
+        </div>
+      </div>
+    </section>
 
     <!-- Tabela -->
     <section class="card" style="margin-top:16px;">
@@ -167,21 +182,6 @@
         </table>
       </div>
     </section>
-
-    <!-- Gráficos -->
-    <section class="card" style="margin-top:16px;">
-      <h2>Maiores gastos (gráficos)</h2>
-      <div class="charts">
-        <div>
-          <canvas id="pieCanvas"></canvas>
-          <div id="pieLegend" class="legend"></div>
-        </div>
-        <div>
-          <canvas id="barCanvas"></canvas>
-          <div id="barLegend" class="legend"></div>
-        </div>
-      </div>
-    </section>
   </div>
 
   <footer>
@@ -189,7 +189,7 @@
   </footer>
 
   <script>
-    const storeKey = 'cf_transactions_v4';
+    const storeKey = 'cf_transactions_v5';
     const $ = (s) => document.querySelector(s);
 
     const CATEGORY_LIST = [
@@ -261,7 +261,7 @@
         const chipClass = t.type==='income' ? 'income' : 'expense';
         tr.innerHTML = `
           <td>${t.date.split('-').reverse().join('/')}</td>
-          <td><span class="chip ${chipClass}">${t.type==='income'?'Receita':'Despesa'}</span></td>
+          <td><span class="chip ${chipClass}">${t.type==='income'?'Entrada':'Saída'}</span></td>
           <td>${escapeHtml(t.category)}</td>
           <td>${escapeHtml(t.method||'')}</td>
           <td>${escapeHtml(t.desc||'')}</td>
@@ -374,7 +374,6 @@
     function importCSV(text){
       const lines = text.split(/\r?\n/).filter(Boolean);
       if(lines.length===0) return;
-      // detecta separador ; ou ,
       const sep = (lines[0].split(';').length > lines[0].split(',').length) ? ';' : ',';
       const start = 0; // aceita com ou sem cabeçalho
       for(let i=start;i<lines.length;i++){
@@ -400,8 +399,7 @@
       tr.forEach((row, i)=>{
         const tds = Array.from(row.cells).map(td=>td.textContent.trim());
         if(tds.length < 6) return;
-        // pula linha de cabeçalho se identificar "DATA"
-        if(i===0 && /data/i.test(tds[0])) return;
+        if(i===0 && /data/i.test(tds[0])) return; // pula cabeçalho
         const [A,B,C,D,E,F] = tds;
         const date = normalizeDate(A);
         const type = /entrada/i.test(B) ? 'income' : 'expense';
@@ -447,7 +445,7 @@
     }
 
     function sizeCanvases(){
-      // Pie: canvas quadrado (garante pizza redonda)
+      // Pie: canvas quadrado (pizza redonda)
       const pie = $('#pieCanvas');
       const wPie = Math.floor(pie.clientWidth || pie.parentElement.clientWidth);
       pie.width = wPie; pie.height = wPie;
