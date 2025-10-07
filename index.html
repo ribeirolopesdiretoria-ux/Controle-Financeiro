@@ -4,23 +4,78 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Controle Financeiro</title>
-  <link rel="stylesheet" href="styles.css" />
-  <!-- Evita 404 do favicon -->
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32'%3E%3Crect width='100%25' height='100%25' rx='6' ry='6' fill='%230f172a'/%3E%3Ctext x='50%25' y='62%25' dominant-baseline='middle' text-anchor='middle' fill='%23e5e7eb' font-size='18' font-family='Arial,Helvetica,sans-serif'%3EFR%3C/text%3E%3C/svg%3E" />
   <style>
-    /* Estilos extras só dos gráficos */
-    .charts { display:grid; gap:16px; grid-template-columns: 1fr; margin-top:16px; }
-    @media (min-width: 900px){ .charts { grid-template-columns: 1fr 1fr; } }
-    canvas { width: 100%; height: auto; border: 1px dashed var(--border); border-radius: 12px; background: #0b1220; display:block; }
-    .legend { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
-    .legend .item { display:inline-flex; align-items:center; gap:6px; font-size:12px; color: var(--muted); padding:6px 8px; border:1px solid var(--border); border-radius: 999px; }
-    .swatch { width:10px; height:10px; border-radius:2px; display:inline-block; }
+    :root {
+      --bg: #0f172a;
+      --card: #111827;
+      --muted: #94a3b8;
+      --text: #e5e7eb;
+      --accent: #22c55e;
+      --danger: #ef4444;
+      --border: #1f2937;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      background: linear-gradient(180deg, #0b1220, #0f172a 40%);
+      color: var(--text);
+    }
+    header {
+      padding: 24px 16px; max-width: 1100px; margin: 0 auto;
+    }
+    h1 { margin: 0 0 8px; font-size: 28px; }
+    .sub { color: var(--muted); font-size: 14px; }
+
+    .container { max-width: 1100px; margin: 0 auto; padding: 0 16px 48px; }
+    .grid {
+      display: grid; gap: 16px; grid-template-columns: 1fr; 
+    }
+    @media (min-width: 900px){ .grid { grid-template-columns: 1.1fr 1fr; } }
+
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 16px; }
+    .card h2 { margin: 0 0 12px; font-size: 18px; }
+    label { font-size: 12px; color: var(--muted); display:block; margin-bottom:6px; }
+    input, select, button, textarea {
+      width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border);
+      background:#0b1220; color: var(--text);
+    }
+    input[type="number"] { text-align: right; }
+    .row { display:grid; grid-template-columns: 1fr; gap:12px; }
+    @media (min-width:640px){ .row{ grid-template-columns: repeat(6,1fr);} }
+    .col-2{ grid-column: span 2; } .col-3{ grid-column: span 3; } .col-4{ grid-column: span 4; } .col-6{ grid-column: span 6; }
+
+    .btn { cursor: pointer; border: 1px solid var(--border); transition: .2s ease; }
+    .btn:hover { transform: translateY(-1px); }
+    .btn-primary { background: #16a34a; border-color:#15803d; }
+    .btn-muted { background: #0b1220; }
+    .btn-danger { background: #991b1b; border-color:#7f1d1d; }
+
+    .summary { display:grid; grid-template-columns: repeat(3,1fr); gap:12px; }
+    .stat { background:#0b1220; border:1px dashed var(--border); padding:14px; border-radius:12px; }
+    .stat .label { color: var(--muted); font-size:12px; }
+    .stat .value { margin-top:6px; font-size:20px; }
+
+    table { width:100%; border-collapse: collapse; }
+    thead th { text-align:left; font-size:12px; color: var(--muted); padding:10px; border-bottom:1px solid var(--border); }
+    tbody td { padding:12px 10px; border-bottom:1px dashed var(--border); vertical-align: top; }
+    .right { text-align:right; }
+    .chip { padding:4px 8px; border-radius:999px; font-size:12px; border:1px solid var(--border); background:#0b1220; }
+    .chip.income { color:#22c55e; }
+    .chip.expense { color:#f87171; }
+
+    .actions { display:flex; gap:8px; justify-content:flex-end; }
+    .actions button { width:auto; padding:8px 10px; font-size:12px; }
+
+    footer { max-width:1100px; margin: 12px auto 40px; padding: 0 16px; color: var(--muted); font-size: 12px; }
+    .inline { display:flex; gap:8px; flex-wrap: wrap; }
+    .inline > * { flex: 1 1 160px; }
+    .hidden { display:none; }
   </style>
 </head>
 <body>
   <header>
     <h1>Controle Financeiro</h1>
-    <div class="sub">Cadastre <b>entradas</b> e <b>saídas</b>, filtre por <b>ano e mês</b>, veja os maiores gastos em gráficos e exporte para Excel (.xls). Tudo salvo localmente (localStorage).</div>
+    <div class="sub">Cadastre receitas e despesas, filtre por mês e acompanhe seu saldo. Os dados ficam salvos no seu navegador (localStorage).</div>
   </header>
 
   <div class="container">
@@ -33,8 +88,8 @@
             <div class="col-2">
               <label for="type">Tipo</label>
               <select id="type" required>
-                <option value="income">Entrada</option>
-                <option value="expense">Saída</option>
+                <option value="income">Receita</option>
+                <option value="expense">Despesa</option>
               </select>
             </div>
             <div class="col-2">
@@ -47,22 +102,23 @@
             </div>
             <div class="col-3">
               <label for="category">Categoria</label>
-              <select id="category" required></select>
+              <div class="inline">
+                <select id="category" required>
+                  <option>Alimentação</option>
+                  <option>Moradia</option>
+                  <option>Transporte</option>
+                  <option>Lazer</option>
+                  <option>Saúde</option>
+                  <option>Salário</option>
+                  <option>Serviços</option>
+                  <option>Outros</option>
+                </select>
+                <input id="newCat" type="text" placeholder="Adicionar categoria (opcional)" />
+              </div>
             </div>
             <div class="col-3">
-              <label for="method">Forma de pagamento</label>
-              <select id="method" required>
-                <option>PIX</option>
-                <option>CARTÃO DE DÉBITO</option>
-                <option>CARTÃO DE CRÉDITO</option>
-                <option>BOLETO</option>
-                <option>TED</option>
-                <option>DÉBITO AUTOMÁTICO</option>
-              </select>
-            </div>
-            <div class="col-6">
               <label for="desc">Descrição</label>
-              <input id="desc" type="text" placeholder="Ex.: Energia, Aluguel, Uber" />
+              <input id="desc" type="text" placeholder="Ex.: Supermercado, Aluguel, Bônus" />
             </div>
             <div class="col-6">
               <button class="btn btn-primary" type="submit">Adicionar</button>
@@ -75,68 +131,28 @@
       <section class="card">
         <h2>Filtros & Resumo</h2>
         <div class="row">
-          <div class="col-2">
-            <label for="year">Ano</label>
-            <select id="year"></select>
-          </div>
-          <div class="col-2">
+          <div class="col-3">
             <label for="month">Mês</label>
-            <select id="month">
-              <option value="">Todos</option>
-              <option value="01">Jan</option>
-              <option value="02">Fev</option>
-              <option value="03">Mar</option>
-              <option value="04">Abr</option>
-              <option value="05">Mai</option>
-              <option value="06">Jun</option>
-              <option value="07">Jul</option>
-              <option value="08">Ago</option>
-              <option value="09">Set</option>
-              <option value="10">Out</option>
-              <option value="11">Nov</option>
-              <option value="12">Dez</option>
-            </select>
+            <input id="month" type="month" />
           </div>
-          <div class="col-2">
+          <div class="col-3">
             <label for="fCat">Categoria</label>
             <select id="fCat">
               <option value="">Todas</option>
             </select>
           </div>
-          <div class="col-2">
-            <label for="fMethod">Forma</label>
-            <select id="fMethod">
-              <option value="">Todas</option>
-              <option>PIX</option>
-              <option>CARTÃO DE DÉBITO</option>
-              <option>CARTÃO DE CRÉDITO</option>
-              <option>BOLETO</option>
-              <option>TED</option>
-              <option>DÉBITO AUTOMÁTICO</option>
-            </select>
-          </div>
-          <div class="col-2">
+          <div class="col-6">
             <label for="search">Busca</label>
             <input id="search" type="text" placeholder="Filtrar por descrição" />
-          </div>
-          <div class="col-2">
-            <label>&nbsp;</label>
-            <div class="inline">
-              <button id="btnExportXls" class="btn btn-muted" type="button">Exportar Excel (.xls)</button>
-              <label class="btn btn-muted" style="display:inline-flex; align-items:center; justify-content:center; cursor:pointer;">
-                Importar Excel (.xls/.csv)
-                <input id="importXls" class="hidden" type="file" accept=".xls,.csv,text/csv,application/vnd.ms-excel" />
-              </label>
-            </div>
           </div>
         </div>
         <div class="summary" style="margin-top:12px;">
           <div class="stat">
-            <div class="label">Entradas</div>
+            <div class="label">Receitas</div>
             <div id="sumIncome" class="value">R$ 0,00</div>
           </div>
           <div class="stat">
-            <div class="label">Saídas</div>
+            <div class="label">Despesas</div>
             <div id="sumExpense" class="value">R$ 0,00</div>
           </div>
           <div class="stat">
@@ -144,35 +160,28 @@
             <div id="sumBalance" class="value">R$ 0,00</div>
           </div>
         </div>
+        <div style="margin-top:12px;" class="inline">
+          <button id="btnExportCsv" class="btn btn-muted" type="button">Exportar CSV</button>
+          <button id="btnExportJson" class="btn btn-muted" type="button">Exportar JSON</button>
+          <label class="btn btn-muted" style="display:inline-flex; align-items:center; justify-content:center; cursor:pointer;">
+            Importar JSON
+            <input id="importFile" class="hidden" type="file" accept="application/json" />
+          </label>
+          <button id="btnReset" class="btn btn-danger" type="button" title="Apaga todas as movimentações">Limpar tudo</button>
+        </div>
       </section>
     </div>
-
-    <!-- Gráficos (agora acima das movimentações) -->
-    <section class="card" style="margin-top:16px;">
-      <h2>Maiores gastos (gráficos)</h2>
-      <div class="charts">
-        <div>
-          <canvas id="pieCanvas"></canvas>
-          <div id="pieLegend" class="legend"></div>
-        </div>
-        <div>
-          <canvas id="barCanvas"></canvas>
-          <div id="barLegend" class="legend"></div>
-        </div>
-      </div>
-    </section>
 
     <!-- Tabela -->
     <section class="card" style="margin-top:16px;">
       <h2>Movimentações</h2>
-      <div class="table-wrap">
+      <div style="overflow:auto;">
         <table id="txTable">
           <thead>
             <tr>
               <th>Data</th>
               <th>Tipo</th>
               <th>Categoria</th>
-              <th>Forma</th>
               <th>Descrição</th>
               <th class="right">Valor</th>
               <th class="right">Ações</th>
@@ -189,19 +198,15 @@
   </footer>
 
   <script>
-    const storeKey = 'cf_transactions_v5';
+    const storeKey = 'cf_transactions_v1';
     const $ = (s) => document.querySelector(s);
 
-    const CATEGORY_LIST = [
-      'ÁGUA','ALMOÇO','ALTOQI','ANIVERSÁRIO','ART','AUTODESK','CARRO','COMPRA TECNOLOGIA','CONSULTORIA ESPECIALIZADA','CUSTO ADM','DESPESAS','DESPESAS CARTÕES','ENERGIA','ENTRADA','FOLHA SALARIAL','GASOLINA','JANTAR','LIMPEZA','MANUTENÇÃO','TARIFA SICOOB','TERCEIRIZADO','UBER'
-    ];
-
     const state = {
-      transactions: [], // {id,type,date,category,method,desc,amountCents}
-      filters: { year: '', month: '', category: '', method: '', search: '' }
+      transactions: [], // {id, type:'income'|'expense', date:'YYYY-MM-DD', category, desc, amountCents}
+      filters: { month: '', category: '', search: '' }
     };
 
-    // Utils
+    // Utilidades
     const fmt = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
     const parseAmount = (v) => Math.round(Number(String(v).replace(',', '.')) * 100);
     const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -212,35 +217,39 @@
       catch { state.transactions = []; }
     }
 
-    function initCategorySelects(){
-      const catSel = $('#category');
-      catSel.innerHTML = CATEGORY_LIST.map(c=>`<option>${c}</option>`).join('');
-      const fCat = $('#fCat');
-      fCat.innerHTML = '<option value="">Todas</option>' + CATEGORY_LIST.map(c=>`<option>${c}</option>`).join('');
+    function ensureMonth(){
+      const m = $('#month');
+      if(!m.value){
+        const d = new Date();
+        const ym = d.toISOString().slice(0,7);
+        m.value = ym;
+        state.filters.month = ym;
+      }
     }
 
-    function initYear(){
-      const y = $('#year');
-      const years = new Set();
-      const nowY = new Date().getFullYear();
-      years.add(nowY);
-      state.transactions.forEach(t=> years.add(Number(t.date.slice(0,4))));
-      const list = Array.from(years).sort((a,b)=>b-a);
-      y.innerHTML = list.map(v=>`<option value="${v}">${v}</option>`).join('');
-      state.filters.year = String(list[0] || nowY);
-      y.value = state.filters.year;
+    function categories(){
+      const base = new Set(['Alimentação','Moradia','Transporte','Lazer','Saúde','Salário','Serviços','Outros']);
+      state.transactions.forEach(t => base.add(t.category));
+      return Array.from(base).sort((a,b)=>a.localeCompare(b,'pt-BR'));
+    }
+
+    function refreshCategoryFilters(){
+      const fCat = $('#fCat');
+      fCat.innerHTML = '<option value="">Todas</option>' + categories().map(c=>`<option>${c}</option>`).join('');
+      // Seleciona se já havia filtro aplicado
+      if(state.filters.category){ fCat.value = state.filters.category; }
+      // Também atualiza o select do formulário
+      const catSel = $('#category');
+      catSel.innerHTML = categories().map(c=>`<option>${c}</option>`).join('');
     }
 
     function applyFilters(list){
-      const { year, month, category, method, search } = state.filters;
-      return list.filter(t=>{
-        const [y,m] = t.date.split('-');
-        const byYear = year ? y === String(year) : true;
-        const byMonth = month ? m === month : true;
-        const byCat = category ? t.category === category : true;
-        const byMethod = method ? t.method === method : true;
-        const bySearch = search ? (t.desc||'').toLowerCase().includes(search.toLowerCase()) : true;
-        return byYear && byMonth && byCat && byMethod && bySearch;
+      const { month, category, search } = state.filters;
+      return list.filter(t => {
+        const inMonth = month ? t.date.startsWith(month) : true;
+        const inCat = category ? t.category === category : true;
+        const inSearch = search ? (t.desc || '').toLowerCase().includes(search.toLowerCase()) : true;
+        return inMonth && inCat && inSearch;
       });
     }
 
@@ -252,7 +261,8 @@
       $('#sumBalance').textContent = fmt.format((inc-exp)/100);
     }
 
-    function renderTable(){
+    function render(){
+      refreshCategoryFilters();
       const body = $('#txBody');
       body.innerHTML = '';
       const filtered = applyFilters(state.transactions).sort((a,b)=> b.date.localeCompare(a.date));
@@ -261,15 +271,15 @@
         const chipClass = t.type==='income' ? 'income' : 'expense';
         tr.innerHTML = `
           <td>${t.date.split('-').reverse().join('/')}</td>
-          <td><span class="chip ${chipClass}">${t.type==='income'?'Entrada':'Saída'}</span></td>
+          <td><span class="chip ${chipClass}">${t.type==='income'?'Receita':'Despesa'}</span></td>
           <td>${escapeHtml(t.category)}</td>
-          <td>${escapeHtml(t.method||'')}</td>
-          <td>${escapeHtml(t.desc||'')}</td>
+          <td>${escapeHtml(t.desc || '')}</td>
           <td class="right">${fmt.format(t.amountCents/100)}</td>
           <td class="right actions">
             <button class="btn btn-muted" data-edit="${t.id}">Editar</button>
             <button class="btn btn-danger" data-del="${t.id}">Excluir</button>
-          </td>`;
+          </td>
+        `;
         body.appendChild(tr);
       }
       summarize(filtered);
@@ -283,15 +293,17 @@
       const type = $('#type').value;
       const date = $('#date').value || new Date().toISOString().slice(0,10);
       const amountCents = parseAmount($('#amount').value || 0);
-      const category = $('#category').value;
-      const method = $('#method').value;
+      let category = $('#category').value;
+      const newCat = $('#newCat').value.trim();
+      if(newCat){ category = newCat; $('#newCat').value=''; }
       const desc = $('#desc').value.trim();
       if(!amountCents){ alert('Informe um valor válido.'); return; }
-      const tx = { id: uid(), type, date, category, method, desc, amountCents };
+      const tx = { id: uid(), type, date, category, desc, amountCents };
       state.transactions.push(tx);
       save();
-      e.target.reset();
-      renderAll();
+      (e.target).reset();
+      ensureMonth();
+      render();
     }
 
     function onTableClick(e){
@@ -300,7 +312,7 @@
       if(delId){
         if(confirm('Excluir esta movimentação?')){
           state.transactions = state.transactions.filter(t=>t.id!==delId);
-          save(); renderAll();
+          save(); render();
         }
       }
       if(editId){
@@ -309,232 +321,90 @@
         const desc = prompt('Descrição:', t.desc||''); if(desc===null) return;
         const amountStr = prompt('Valor (R$):', (t.amountCents/100).toFixed(2).replace('.', ',')); if(amountStr===null) return;
         const category = prompt('Categoria:', t.category); if(category===null) return;
-        const method = prompt('Forma de pagamento:', t.method||'PIX'); if(method===null) return;
         const date = prompt('Data (AAAA-MM-DD):', t.date); if(date===null) return;
         const type = prompt('Tipo (income/expense):', t.type); if(type===null) return;
         const amountCents = parseAmount(amountStr);
         if(!amountCents || (type!=='income' && type!=='expense') || !/^\d{4}-\d{2}-\d{2}$/.test(date)){
           alert('Dados inválidos. Edição cancelada.'); return;
         }
-        Object.assign(t, { desc, amountCents, category, method, date, type });
-        save(); renderAll();
+        Object.assign(t, { desc, amountCents, category, date, type });
+        save(); render();
       }
     }
 
-    // ---- Exportar Excel (.xls via HTML table) ----
-    function exportXLS(){
-      const filtered = applyFilters(state.transactions);
-      const rows = filtered.map(t=>[
-        t.date.split('-').reverse().join('/'),
-        t.type==='income'?'entrada':'saída',
-        t.category,
-        t.method||'',
-        (t.desc||'').replaceAll('"','""'),
-        (t.amountCents/100).toFixed(2).replace('.', ',')
-      ]);
-      const header = ['DATA','CAIXA','TIPO','PAGAMENTO','DESCRIÇÃO','VALOR'];
-      const tableHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body><table border="1">`
-        + '<tr>'+header.map(h=>`<th>${h}</th>`).join('')+'</tr>'
-        + rows.map(r=>'<tr>'+r.map(c=>`<td>${c}</td>`).join('')+'</tr>').join('')
-        + '</table></body></html>';
-      const blob = new Blob([tableHtml], { type: 'application/vnd.ms-excel' });
+    // Export / Import
+    function download(filename, content, mime){
       const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = 'movimentacoes.xls';
-      a.click();
+      a.href = URL.createObjectURL(new Blob([content], { type: mime }));
+      a.download = filename; a.click();
       setTimeout(()=>URL.revokeObjectURL(a.href), 5000);
     }
 
-    // ---- Importar Excel (.xls HTML) ou CSV ----
-    function importFromFile(file){
-      const name = file.name.toLowerCase();
-      const isCSV = name.endsWith('.csv');
-      const isXLS = name.endsWith('.xls');
-      const isXLSX = name.endsWith('.xlsx');
-      if(isXLSX){
-        alert('Importação de .xlsx direta não suportada aqui. Exporte sua planilha para .CSV ou .XLS (HTML) e importe novamente.');
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = () => {
-        try{
-          if(isCSV){
-            importCSV(reader.result);
-          }else if(isXLS){
-            importXLSHtml(reader.result);
-          }else{
-            alert('Formato não suportado. Use .xls ou .csv');
-          }
-        }catch(err){ alert('Falha ao importar: '+ err.message); }
-      };
-      if(isCSV) reader.readAsText(file, 'utf-8'); else reader.readAsText(file);
-    }
-
-    // CSV esperado com colunas: A Data, B entrada/saída, C Categoria Despesa, D Forma, E Descrição, F Valor
-    function importCSV(text){
-      const lines = text.split(/\r?\n/).filter(Boolean);
-      if(lines.length===0) return;
-      const sep = (lines[0].split(';').length > lines[0].split(',').length) ? ';' : ',';
-      const start = 0; // aceita com ou sem cabeçalho
-      for(let i=start;i<lines.length;i++){
-        const cols = lines[i].split(sep);
-        if(cols.length < 6) continue;
-        const [A,B,C,D,E,F] = cols;
-        const date = normalizeDate(A.trim());
-        const type = /entrada/i.test(B) ? 'income' : 'expense';
-        const category = (C||'').trim();
-        const method = (D||'').trim();
-        const desc = (E||'').trim();
-        const amountCents = parseAmount((F||'0').replace(/\./g,'').replace(',','.'));
-        const tx = { id: uid(), type, date, category, method, desc, amountCents };
-        state.transactions.push(tx);
-      }
-      save(); renderAll(); alert('Importação concluída.');
-    }
-
-    // .xls (HTML table salvo pelo Excel)
-    function importXLSHtml(html){
-      const doc = new DOMParser().parseFromString(html, 'text/html');
-      const tr = Array.from(doc.querySelectorAll('table tr'));
-      tr.forEach((row, i)=>{
-        const tds = Array.from(row.cells).map(td=>td.textContent.trim());
-        if(tds.length < 6) return;
-        if(i===0 && /data/i.test(tds[0])) return; // pula cabeçalho
-        const [A,B,C,D,E,F] = tds;
-        const date = normalizeDate(A);
-        const type = /entrada/i.test(B) ? 'income' : 'expense';
-        const category = C;
-        const method = D;
-        const desc = E;
-        const amountCents = parseAmount((F||'0').replace(/\./g,'').replace(',','.'));
-        const tx = { id: uid(), type, date, category, method, desc, amountCents };
-        state.transactions.push(tx);
-      });
-      save(); renderAll(); alert('Importação concluída.');
-    }
-
-    function normalizeDate(s){
-      const t = String(s).trim();
-      // dd/mm/aaaa -> aaaa-mm-dd
-      const m = t.match(/^(\d{1,2})[\/](\d{1,2})[\/](\d{2,4})$/);
-      if(m){
-        const dd = m[1].padStart(2,'0');
-        const mm = m[2].padStart(2,'0');
-        const yyyy = m[3].length===2 ? ('20'+m[3]) : m[3];
-        return `${yyyy}-${mm}-${dd}`;
-      }
-      // aaaa-mm-dd
-      if(/^\d{4}-\d{2}-\d{2}$/.test(t)) return t;
-      // fallback: hoje
-      return new Date().toISOString().slice(0,10);
-    }
-
-    // ---- Gráficos ----
-    function hsl(i,n){ return `hsl(${Math.round(360*i/n)}, 70%, 55%)`; }
-
-    function topExpensesAgg(list, topN=5){
-      const map = new Map();
-      list.filter(t=>t.type==='expense').forEach(t=>{
-        map.set(t.category, (map.get(t.category)||0) + t.amountCents);
-      });
-      const arr = Array.from(map.entries()).sort((a,b)=>b[1]-a[1]);
-      const top = arr.slice(0, topN);
-      const othersSum = arr.slice(topN).reduce((s, [,v])=>s+v, 0);
-      if(othersSum>0) top.push(['Outros', othersSum]);
-      return top.map(([k,v])=>({label:k, value:v/100}));
-    }
-
-    function sizeCanvases(){
-      // Pie: canvas quadrado (pizza redonda)
-      const pie = $('#pieCanvas');
-      const wPie = Math.floor(pie.clientWidth || pie.parentElement.clientWidth);
-      pie.width = wPie; pie.height = wPie;
-      // Bar: 3:2
-      const bar = $('#barCanvas');
-      const wBar = Math.floor(bar.clientWidth || bar.parentElement.clientWidth);
-      bar.width = wBar; bar.height = Math.max(260, Math.floor(wBar*2/3));
-    }
-
-    function drawPie(canvas, data){
-      const ctx = canvas.getContext('2d');
-      const { width, height } = canvas;
-      ctx.clearRect(0,0,width,height);
-      const cx = width/2, cy = height/2; const r = Math.min(width,height)*0.42;
-      const total = data.reduce((s,d)=>s+d.value,0) || 1;
-      let start = -Math.PI/2;
-      data.forEach((d,i)=>{
-        const ang = (d.value/total)*Math.PI*2;
-        ctx.beginPath(); ctx.moveTo(cx,cy);
-        ctx.arc(cx,cy,r,start,start+ang);
-        ctx.closePath(); ctx.fillStyle = hsl(i,data.length);
-        ctx.fill();
-        start += ang;
-      });
-    }
-
-    function drawBars(canvas, data){
-      const ctx = canvas.getContext('2d');
-      const { width, height } = canvas;
-      ctx.clearRect(0,0,width,height);
-      const pad = 30; const base = height - pad; const left = 60; const right = width - pad;
-      const w = right - left; const max = Math.max(...data.map(d=>d.value), 1);
-      const gap = 12; const bw = (w - gap*(data.length-1)) / data.length;
-      ctx.strokeStyle = '#1f2937'; ctx.beginPath(); ctx.moveTo(left, base); ctx.lineTo(right, base); ctx.stroke();
-      data.forEach((d,i)=>{
-        const h = (d.value/max) * (height - pad*2);
-        const x = left + i*(bw+gap);
-        const y = base - h;
-        ctx.fillStyle = hsl(i,data.length);
-        ctx.fillRect(x, y, bw, h);
-        ctx.fillStyle = '#94a3b8';
-        ctx.font = '12px system-ui, -apple-system, Segoe UI, Roboto, Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText(d.label.length>10? d.label.slice(0,10)+'…' : d.label, x + bw/2, base + 14);
-        ctx.textAlign = 'right';
-        ctx.fillText(fmt.format(d.value), x + bw, y - 4);
-      });
-    }
-
-    function renderLegends(pieData){
-      const pieL = $('#pieLegend');
-      const barL = $('#barLegend');
-      const items = pieData.map((d,i)=>`<span class="item"><i class="swatch" style="background:${hsl(i,pieData.length)}"></i>${d.label}: <b>${fmt.format(d.value)}</b></span>`).join('');
-      pieL.innerHTML = items; barL.innerHTML = items;
-    }
-
-    function renderCharts(){
-      sizeCanvases();
-      const filtered = applyFilters(state.transactions);
-      const data = topExpensesAgg(filtered, 5);
-      drawPie($('#pieCanvas'), data);
-      drawBars($('#barCanvas'), data);
-      renderLegends(data);
+    function toCSV(list){
+      const header = ['id','tipo','data','categoria','descricao','valor'];
+      const rows = list.map(t=>[
+        t.id,
+        t.type,
+        t.date,
+        '"'+String(t.category).replaceAll('"','""')+'"',
+        '"'+String(t.desc||'').replaceAll('"','""')+'"',
+        (t.amountCents/100).toFixed(2).replace('.', ',')
+      ].join(','));
+      return header.join(',')+'\n'+rows.join('\n');
     }
 
     // Eventos UI
     $('#txForm').addEventListener('submit', addTx);
     $('#txTable').addEventListener('click', onTableClick);
-    $('#btnExportXls').addEventListener('click', exportXLS);
-    $('#importXls').addEventListener('change', (e)=>{ const f=e.target.files?.[0]; if(f) importFromFile(f); e.target.value=''; });
 
-    $('#year').addEventListener('change', e=>{ state.filters.year = e.target.value; renderAll(); });
-    $('#month').addEventListener('change', e=>{ state.filters.month = e.target.value; renderAll(); });
-    $('#fCat').addEventListener('change', e=>{ state.filters.category = e.target.value; renderAll(); });
-    $('#fMethod').addEventListener('change', e=>{ state.filters.method = e.target.value; renderAll(); });
-    $('#search').addEventListener('input', e=>{ state.filters.search = e.target.value; renderAll(); });
-    window.addEventListener('resize', renderCharts);
+    $('#month').addEventListener('input', e=>{ state.filters.month = e.target.value; render(); });
+    $('#fCat').addEventListener('change', e=>{ state.filters.category = e.target.value; render(); });
+    $('#search').addEventListener('input', e=>{ state.filters.search = e.target.value; render(); });
 
-    function renderAll(){
-      initYear();
-      renderTable();
-      renderCharts();
-    }
+    $('#btnExportCsv').addEventListener('click', ()=>{
+      const filtered = applyFilters(state.transactions);
+      download('movimentacoes.csv', toCSV(filtered), 'text/csv;charset=utf-8');
+    });
+    $('#btnExportJson').addEventListener('click', ()=>{
+      const filtered = applyFilters(state.transactions);
+      download('movimentacoes.json', JSON.stringify(filtered, null, 2), 'application/json');
+    });
+    $('#importFile').addEventListener('change', async (e)=>{
+      const file = e.target.files?.[0]; if(!file) return;
+      const text = await file.text();
+      try{
+        const arr = JSON.parse(text);
+        if(!Array.isArray(arr)) throw new Error('Formato inválido');
+        // Normaliza e mescla sem duplicar IDs
+        const ids = new Set(state.transactions.map(t=>t.id));
+        arr.forEach(x=>{
+          if(!x || typeof x!=='object') return;
+          const t = {
+            id: x.id || uid(),
+            type: x.type==='income'?'income':'expense',
+            date: /^\d{4}-\d{2}-\d{2}$/.test(x.date?String(x.date):'') ? x.date : new Date().toISOString().slice(0,10),
+            category: String(x.category||'Outros'),
+            desc: String(x.desc||x.descricao||''),
+            amountCents: Number.isFinite(x.amountCents) ? x.amountCents : parseAmount(x.valor||0)
+          };
+          if(!ids.has(t.id)){ state.transactions.push(t); ids.add(t.id); }
+        });
+        save(); render();
+        alert('Importação concluída.');
+      }catch(err){ alert('Falha ao importar: '+ err.message); }
+      e.target.value = '';
+    });
+
+    $('#btnReset').addEventListener('click', ()=>{
+      if(confirm('Tem certeza? Isso apagará todas as movimentações salvas.')){
+        state.transactions = []; save(); render();
+      }
+    });
 
     // Inicialização
     load();
-    initCategorySelects();
-    initYear();
-    renderAll();
+    ensureMonth();
+    render();
   </script>
 </body>
 </html>
