@@ -50,16 +50,33 @@
     .legend{ display:flex; flex-wrap:wrap; gap:8px; margin-top:8px }
     .legend .item{ display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--muted); padding:6px 8px; border:1px solid var(--border); border-radius:999px }
     .swatch{ width:10px; height:10px; border-radius:2px; display:inline-block }
+
+    /* --- IMPRESSÃO / PDF --- */
+    .no-print{ }
+    @media print{
+      body{ background:#fff; color:#000; -webkit-print-color-adjust:exact; print-color-adjust:exact }
+      header, .no-print{ display:none !important }
+      .container{ max-width: 100%; padding:0 12mm }
+      .card{ background:#fff; border:0; padding:0 }
+      .legend .item{ border-color:#999 }
+      thead th{ color:#000; border-color:#999 }
+      tbody td{ border-color:#ddd }
+      .page-title{ display:block; font-weight:700; font-size:18px; margin:0 0 4mm }
+      .page-sub{ color:#333; font-size:12px; margin:0 0 6mm }
+      .charts{ page-break-inside:avoid; }
+      .report-section{ page-break-inside:avoid; margin-bottom:8mm }
+      .table-section{ page-break-before:avoid; }
+    }
   </style>
 </head>
 <body>
   <header>
     <h1>Controle Financeiro</h1>
-    <div class="sub">Cadastre <b>entradas</b> e <b>saídas</b>, filtre por <b>ano e mês</b>, importe/exporte planilhas e acompanhe os maiores gastos em gráficos. Dados ficam no seu navegador (localStorage).</div>
+    <div class="sub">Cadastre <b>entradas</b> e <b>saídas</b>, filtre por <b>ano e mês</b>, importe/exporte planilhas e acompanhe os maiores gastos em gráficos. Os dados ficam no seu navegador (localStorage).</div>
   </header>
 
   <div class="container">
-    <div class="grid">
+    <div class="grid no-print">
       <!-- Formulário -->
       <section class="card">
         <h2>Nova movimentação</h2>
@@ -80,13 +97,13 @@
               <label for="amount">Valor (R$)</label>
               <input id="amount" type="number" step="0.01" min="0" placeholder="0,00" required />
             </div>
-            <div class="col-2">
-              <label for="method">Pagamento</label>
-              <select id="method" required></select>
-            </div>
-            <div class="col-2">
+            <div class="col-3">
               <label for="category">Categoria</label>
               <select id="category" required></select>
+            </div>
+            <div class="col-3">
+              <label for="method">Pagamento</label>
+              <select id="method" required></select>
             </div>
             <div class="col-6">
               <label for="desc">Descrição</label>
@@ -113,7 +130,7 @@
               <option value="">Todos</option>
               <option value="01">Jan</option><option value="02">Fev</option><option value="03">Mar</option>
               <option value="04">Abr</option><option value="05">Mai</option><option value="06">Jun</option>
-              <option value="07">Jul</option><option value="08">Ago</option><option value="09">Set</option>
+              <option value="07">Julho</option><option value="08">Ago</option><option value="09">Set</option>
               <option value="10">Out</option><option value="11">Nov</option><option value="12">Dez</option>
             </select>
           </div>
@@ -142,12 +159,15 @@
             <input id="importXls" class="hidden" type="file" accept=".xls,.csv,text/csv,application/vnd.ms-excel" />
           </label>
           <button id="btnDeleteAll" class="btn btn-danger" type="button" title="Apagar todas as movimentações">Excluir todas</button>
+          <button id="btnPdf" class="btn btn-primary" type="button" title="Exportar página para PDF">Exportar PDF</button>
         </div>
       </section>
     </div>
 
-    <!-- Gráficos (acima da tabela) -->
-    <section class="card" style="margin-top:16px;">
+    <!-- BLOCO QUE VAI PARA O PDF -->
+    <section id="report" class="card report-section">
+      <div class="page-title">Relatório Financeiro</div>
+      <div class="page-sub" id="reportMeta"></div>
       <h2>Maiores gastos (gráficos)</h2>
       <div class="charts">
         <div>
@@ -161,8 +181,7 @@
       </div>
     </section>
 
-    <!-- Tabela -->
-    <section class="card" style="margin-top:16px;">
+    <section class="card table-section">
       <h2>Movimentações</h2>
       <div style="overflow:auto;">
         <table id="txTable">
@@ -174,7 +193,7 @@
               <th>Forma</th>
               <th>Descrição</th>
               <th class="right">Valor</th>
-              <th class="right">Ações</th>
+              <th class="right no-print">Ações</th>
             </tr>
           </thead>
           <tbody id="txBody"></tbody>
@@ -183,10 +202,10 @@
     </section>
   </div>
 
-  <footer>Feito para uso local. Nenhum dado é enviado para servidores.</footer>
+  <footer class="no-print">Feito para uso local. Nenhum dado é enviado para servidores.</footer>
 
   <script>
-    const storeKey = 'cf_transactions_corrigido';
+    const storeKey = 'cf_transactions_pdf_v1';
     const $ = (s)=>document.querySelector(s);
 
     const CATEGORY_LIST = ['ÁGUA','ALMOÇO','ALTOQI','ANIVERSÁRIO','ART','AUTODESK','CARRO','COMPRA TECNOLOGIA','CONSULTORIA ESPECIALIZADA','CUSTO ADM','DESPESAS','DESPESAS CARTÕES','ENERGIA','ENTRADA','FOLHA SALARIAL','GASOLINA','JANTAR','LIMPEZA','MANUTENÇÃO','TARIFA SICOOB','TERCEIRIZADO','UBER'];
@@ -255,7 +274,7 @@
           <td>${escapeHtml(t.method||'')}</td>
           <td>${escapeHtml(t.desc||'')}</td>
           <td class="right">${fmt.format((t.amountCents||0)/100)}</td>
-          <td class="right actions">
+          <td class="right actions no-print">
             <button class="btn btn-muted" data-edit="${t.id}">Editar</button>
             <button class="btn btn-danger" data-del="${t.id}">Excluir</button>
           </td>`;
@@ -309,45 +328,10 @@
       const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([html],{type:'application/vnd.ms-excel'})); a.download='movimentacoes.xls'; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),5000);
     }
 
-    // IMPORTA .csv ou .xls (HTML) — com detecção de codificação para acentos/ç
+    // IMPORTAÇÃO .csv/.xls (HTML) com detecção de acentuação
     async function readTextSmart(file){ const buf=await file.arrayBuffer(); const td=enc=>{try{return new TextDecoder(enc).decode(buf)}catch{return null}}; let t=td('utf-8'); if(t&&(t.includes('\uFFFD')||/charset=(?:windows-1252|iso-8859-1)/i.test(t))) t=td('windows-1252')||t; return t||td('windows-1252')||''; }
-
-    function importCSV(text){
-      const lines=text.split(/\r?\n/).filter(Boolean); if(!lines.length) return;
-      const sep=(lines[0].split(';').length>lines[0].split(',').length)?';':',';
-      let i=/data/i.test(lines[0])?1:0; // aceita cabeçalho
-      for(;i<lines.length;i++){
-        const cols = lines[i].split(sep);
-        if(cols.length<6) continue; // A..F
-        const [A,B,C,D,E,F] = cols; // Data, Caixa(entrada/saída), Categoria, Pagamento, Descrição, Valor
-        const date = normDate(A||'');
-        const type = /entrada/i.test(B||'') ? 'income' : 'expense';
-        const category = (C||'').trim();
-        const method = (D||'').trim();
-        const desc = (E||'').trim();
-        const amountCents = parseAmountFlexible(F||'0');
-        state.transactions.push({id:uid(), type, date, category, method, desc, amountCents});
-      }
-      save(); renderAll(); alert('Importação concluída.');
-    }
-
-    function importXLSHtml(html){
-      const doc=new DOMParser().parseFromString(html,'text/html');
-      const rows=Array.from(doc.querySelectorAll('table tr'));
-      rows.forEach((row,idx)=>{
-        const tds=Array.from(row.cells).map(td=>td.textContent.trim());
-        if(tds.length<6) return; // precisa A..F
-        if(idx===0 && /data/i.test(tds[0])) return; // pula cabeçalho
-        const [A,B,C,D,E,F]=tds;
-        const date=normDate(A);
-        const type=/entrada/i.test(B)?'income':'expense';
-        const category=C; const method=D; const desc=E;
-        const amountCents=parseAmountFlexible(F);
-        state.transactions.push({id:uid(), type, date, category, method, desc, amountCents});
-      });
-      save(); renderAll(); alert('Importação concluída.');
-    }
-
+    function importCSV(text){ const lines=text.split(/\r?\n/).filter(Boolean); if(!lines.length) return; const sep=(lines[0].split(';').length>lines[0].split(',').length)?';':','; let i=/data/i.test(lines[0])?1:0; for(;i<lines.length;i++){ const cols=lines[i].split(sep); if(cols.length<6) continue; const [A,B,C,D,E,F]=cols; const date=normDate(A||''); const type=/entrada/i.test(B||'')?'income':'expense'; const category=(C||'').trim(); const method=(D||'').trim(); const desc=(E||'').trim(); const amountCents=parseAmountFlexible(F||'0'); state.transactions.push({id:uid(),type,date,category,method,desc,amountCents}); } save(); renderAll(); alert('Importação concluída.'); }
+    function importXLSHtml(html){ const doc=new DOMParser().parseFromString(html,'text/html'); const rows=Array.from(doc.querySelectorAll('table tr')); rows.forEach((row,idx)=>{ const tds=Array.from(row.cells).map(td=>td.textContent.trim()); if(tds.length<6) return; if(idx===0 && /data/i.test(tds[0])) return; const [A,B,C,D,E,F]=tds; const date=normDate(A); const type=/entrada/i.test(B)?'income':'expense'; const category=C; const method=D; const desc=E; const amountCents=parseAmountFlexible(F); state.transactions.push({id:uid(),type,date,category,method,desc,amountCents}); }); save(); renderAll(); alert('Importação concluída.'); }
     function normDate(s){ const t=String(s||'').trim(); const m=t.match(/^(\d{1,2})[\/](\d{1,2})[\/](\d{2,4})$/); if(m){ const dd=m[1].padStart(2,'0'), mm=m[2].padStart(2,'0'), yyyy=m[3].length===2?('20'+m[3]):m[3]; return `${yyyy}-${mm}-${dd}`;} if(/^\d{4}-\d{2}-\d{2}$/.test(t)) return t; return new Date().toISOString().slice(0,10); }
 
     // GRÁFICOS
@@ -359,12 +343,31 @@
     function renderLegends(p){ const items=p.map((d,i)=>`<span class="item"><i class="swatch" style="background:${hsl(i,p.length)}"></i>${d.label}: <b>${fmt.format(d.value)}</b></span>`).join(''); $('#pieLegend').innerHTML=items; $('#barLegend').innerHTML=items; }
     function renderCharts(){ sizeCanvases(); const filtered=applyFilters(state.transactions); const data=topExpensesAgg(filtered,5); drawPie($('#pieCanvas'),data); drawBars($('#barCanvas'),data); renderLegends(data); }
 
+    // PDF (via impressão do navegador)
+    function fillReportMeta(){
+      const ym = state.filters.month? `${state.filters.year}-${state.filters.month}` : `${state.filters.year}`;
+      const parts = [];
+      parts.push(`Período: ${state.filters.month? state.filters.month+'/'+state.filters.year : 'Ano '+state.filters.year}`);
+      if(state.filters.category) parts.push(`Categoria: ${state.filters.category}`);
+      if(state.filters.method) parts.push(`Forma: ${state.filters.method}`);
+      const dt = new Date();
+      $('#reportMeta').textContent = `${parts.join(' | ')} — Gerado em ${dt.toLocaleDateString('pt-BR')} ${dt.toLocaleTimeString('pt-BR')}`;
+    }
+    function exportPDF(){
+      // Garante pizzas redondas no PDF
+      renderCharts(); fillReportMeta();
+      // Pequeno atraso para o layout estabilizar antes do print
+      setTimeout(()=>window.print(), 50);
+    }
+
     // Eventos
     $('#txForm').addEventListener('submit', addTx);
     $('#txTable').addEventListener('click', onTableClick);
     $('#btnExportXls').addEventListener('click', exportXLS);
     $('#importXls').addEventListener('change', async (e)=>{ const f=e.target.files?.[0]; if(!f) return; const name=f.name.toLowerCase(); const txt=await readTextSmart(f); if(name.endsWith('.csv')) importCSV(txt); else if(name.endsWith('.xls')) importXLSHtml(txt); else alert('Formato não suportado. Use .xls ou .csv'); e.target.value=''; });
     $('#btnDeleteAll').addEventListener('click', ()=>{ if(confirm('Tem certeza que deseja EXCLUIR TODAS as movimentações? Esta ação não pode ser desfeita.')){ state.transactions=[]; save(); renderAll(); } });
+    $('#btnPdf').addEventListener('click', exportPDF);
+
     $('#year').addEventListener('change', e=>{ state.filters.year=e.target.value; renderAll(); });
     $('#month').addEventListener('change', e=>{ state.filters.month=e.target.value; renderAll(); });
     $('#fCat').addEventListener('change', e=>{ state.filters.category=e.target.value; renderAll(); });
