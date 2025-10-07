@@ -8,10 +8,10 @@
   <!-- Evita 404 do favicon -->
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32'%3E%3Crect width='100%25' height='100%25' rx='6' ry='6' fill='%230f172a'/%3E%3Ctext x='50%25' y='62%25' dominant-baseline='middle' text-anchor='middle' fill='%23e5e7eb' font-size='18' font-family='Arial,Helvetica,sans-serif'%3EFR%3C/text%3E%3C/svg%3E" />
   <style>
-    /* Pequenos estilos extras para gráficos */
+    /* Estilos extras só dos gráficos */
     .charts { display:grid; gap:16px; grid-template-columns: 1fr; margin-top:16px; }
     @media (min-width: 900px){ .charts { grid-template-columns: 1fr 1fr; } }
-    canvas { width: 100%; height: 340px; border: 1px dashed var(--border); border-radius: 12px; background: #0b1220; }
+    canvas { width: 100%; height: auto; border: 1px dashed var(--border); border-radius: 12px; background: #0b1220; display:block; }
     .legend { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
     .legend .item { display:inline-flex; align-items:center; gap:6px; font-size:12px; color: var(--muted); padding:6px 8px; border:1px solid var(--border); border-radius: 999px; }
     .swatch { width:10px; height:10px; border-radius:2px; display:inline-block; }
@@ -20,7 +20,7 @@
 <body>
   <header>
     <h1>Controle Financeiro</h1>
-    <div class="sub">Cadastre receitas e despesas, filtre por <b>ano e mês</b>, veja os maiores gastos em gráficos e exporte CSV. Tudo salvo localmente (localStorage).</div>
+    <div class="sub">Cadastre receitas e despesas, filtre por <b>ano e mês</b>, veja os maiores gastos em gráficos e exporte para Excel (.xls). Tudo salvo localmente (localStorage).</div>
   </header>
 
   <div class="container">
@@ -121,7 +121,13 @@
           </div>
           <div class="col-2">
             <label>&nbsp;</label>
-            <button id="btnExportCsv" class="btn btn-muted" type="button">Exportar CSV</button>
+            <div class="inline">
+              <button id="btnExportXls" class="btn btn-muted" type="button">Exportar Excel (.xls)</button>
+              <label class="btn btn-muted" style="display:inline-flex; align-items:center; justify-content:center; cursor:pointer;">
+                Importar Excel (.xls/.csv)
+                <input id="importXls" class="hidden" type="file" accept=".xls,.csv,text/csv,application/vnd.ms-excel" />
+              </label>
+            </div>
           </div>
         </div>
         <div class="summary" style="margin-top:12px;">
@@ -167,11 +173,11 @@
       <h2>Maiores gastos (gráficos)</h2>
       <div class="charts">
         <div>
-          <canvas id="pieCanvas" width="600" height="340"></canvas>
+          <canvas id="pieCanvas"></canvas>
           <div id="pieLegend" class="legend"></div>
         </div>
         <div>
-          <canvas id="barCanvas" width="600" height="340"></canvas>
+          <canvas id="barCanvas"></canvas>
           <div id="barLegend" class="legend"></div>
         </div>
       </div>
@@ -183,7 +189,7 @@
   </footer>
 
   <script>
-    const storeKey = 'cf_transactions_v3';
+    const storeKey = 'cf_transactions_v4';
     const $ = (s) => document.querySelector(s);
 
     const CATEGORY_LIST = [
@@ -315,28 +321,117 @@
       }
     }
 
-    // CSV
-    function download(filename, content, mime){
+    // ---- Exportar Excel (.xls via HTML table) ----
+    function exportXLS(){
+      const filtered = applyFilters(state.transactions);
+      const rows = filtered.map(t=>[
+        t.date.split('-').reverse().join('/'),
+        t.type==='income'?'entrada':'saída',
+        t.category,
+        t.method||'',
+        (t.desc||'').replaceAll('"','""'),
+        (t.amountCents/100).toFixed(2).replace('.', ',')
+      ]);
+      const header = ['DATA','CAIXA','TIPO','PAGAMENTO','DESCRIÇÃO','VALOR'];
+      const tableHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body><table border="1">`
+        + '<tr>'+header.map(h=>`<th>${h}</th>`).join('')+'</tr>'
+        + rows.map(r=>'<tr>'+r.map(c=>`<td>${c}</td>`).join('')+'</tr>').join('')
+        + '</table></body></html>';
+      const blob = new Blob([tableHtml], { type: 'application/vnd.ms-excel' });
       const a = document.createElement('a');
-      a.href = URL.createObjectURL(new Blob([content], { type: mime }));
-      a.download = filename; a.click();
+      a.href = URL.createObjectURL(blob);
+      a.download = 'movimentacoes.xls';
+      a.click();
       setTimeout(()=>URL.revokeObjectURL(a.href), 5000);
     }
-    function toCSV(list){
-      const header = ['id','tipo','data','categoria','forma','descricao','valor'];
-      const rows = list.map(t=>[
-        t.id,
-        t.type,
-        t.date,
-        '"'+String(t.category).replaceAll('"','""')+'"',
-        '"'+String(t.method||'').replaceAll('"','""')+'"',
-        '"'+String(t.desc||'').replaceAll('"','""')+'"',
-        (t.amountCents/100).toFixed(2).replace('.', ',')
-      ].join(','));
-      return header.join(',')+'\n'+rows.join('\n');
+
+    // ---- Importar Excel (.xls HTML) ou CSV ----
+    function importFromFile(file){
+      const name = file.name.toLowerCase();
+      const isCSV = name.endsWith('.csv');
+      const isXLS = name.endsWith('.xls');
+      const isXLSX = name.endsWith('.xlsx');
+      if(isXLSX){
+        alert('Importação de .xlsx direta não suportada aqui. Exporte sua planilha para .CSV ou .XLS (HTML) e importe novamente.');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        try{
+          if(isCSV){
+            importCSV(reader.result);
+          }else if(isXLS){
+            importXLSHtml(reader.result);
+          }else{
+            alert('Formato não suportado. Use .xls ou .csv');
+          }
+        }catch(err){ alert('Falha ao importar: '+ err.message); }
+      };
+      if(isCSV) reader.readAsText(file, 'utf-8'); else reader.readAsText(file);
     }
 
-    // Gráficos
+    // CSV esperado com colunas: A Data, B entrada/saída, C Categoria Despesa, D Forma, E Descrição, F Valor
+    function importCSV(text){
+      const lines = text.split(/\r?\n/).filter(Boolean);
+      if(lines.length===0) return;
+      // detecta separador ; ou ,
+      const sep = (lines[0].split(';').length > lines[0].split(',').length) ? ';' : ',';
+      const start = 0; // aceita com ou sem cabeçalho
+      for(let i=start;i<lines.length;i++){
+        const cols = lines[i].split(sep);
+        if(cols.length < 6) continue;
+        const [A,B,C,D,E,F] = cols;
+        const date = normalizeDate(A.trim());
+        const type = /entrada/i.test(B) ? 'income' : 'expense';
+        const category = (C||'').trim();
+        const method = (D||'').trim();
+        const desc = (E||'').trim();
+        const amountCents = parseAmount((F||'0').replace(/\./g,'').replace(',','.'));
+        const tx = { id: uid(), type, date, category, method, desc, amountCents };
+        state.transactions.push(tx);
+      }
+      save(); renderAll(); alert('Importação concluída.');
+    }
+
+    // .xls (HTML table salvo pelo Excel)
+    function importXLSHtml(html){
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      const tr = Array.from(doc.querySelectorAll('table tr'));
+      tr.forEach((row, i)=>{
+        const tds = Array.from(row.cells).map(td=>td.textContent.trim());
+        if(tds.length < 6) return;
+        // pula linha de cabeçalho se identificar "DATA"
+        if(i===0 && /data/i.test(tds[0])) return;
+        const [A,B,C,D,E,F] = tds;
+        const date = normalizeDate(A);
+        const type = /entrada/i.test(B) ? 'income' : 'expense';
+        const category = C;
+        const method = D;
+        const desc = E;
+        const amountCents = parseAmount((F||'0').replace(/\./g,'').replace(',','.'));
+        const tx = { id: uid(), type, date, category, method, desc, amountCents };
+        state.transactions.push(tx);
+      });
+      save(); renderAll(); alert('Importação concluída.');
+    }
+
+    function normalizeDate(s){
+      const t = String(s).trim();
+      // dd/mm/aaaa -> aaaa-mm-dd
+      const m = t.match(/^(\d{1,2})[\/](\d{1,2})[\/](\d{2,4})$/);
+      if(m){
+        const dd = m[1].padStart(2,'0');
+        const mm = m[2].padStart(2,'0');
+        const yyyy = m[3].length===2 ? ('20'+m[3]) : m[3];
+        return `${yyyy}-${mm}-${dd}`;
+      }
+      // aaaa-mm-dd
+      if(/^\d{4}-\d{2}-\d{2}$/.test(t)) return t;
+      // fallback: hoje
+      return new Date().toISOString().slice(0,10);
+    }
+
+    // ---- Gráficos ----
     function hsl(i,n){ return `hsl(${Math.round(360*i/n)}, 70%, 55%)`; }
 
     function topExpensesAgg(list, topN=5){
@@ -351,11 +446,22 @@
       return top.map(([k,v])=>({label:k, value:v/100}));
     }
 
+    function sizeCanvases(){
+      // Pie: canvas quadrado (garante pizza redonda)
+      const pie = $('#pieCanvas');
+      const wPie = Math.floor(pie.clientWidth || pie.parentElement.clientWidth);
+      pie.width = wPie; pie.height = wPie;
+      // Bar: 3:2
+      const bar = $('#barCanvas');
+      const wBar = Math.floor(bar.clientWidth || bar.parentElement.clientWidth);
+      bar.width = wBar; bar.height = Math.max(260, Math.floor(wBar*2/3));
+    }
+
     function drawPie(canvas, data){
       const ctx = canvas.getContext('2d');
       const { width, height } = canvas;
       ctx.clearRect(0,0,width,height);
-      const cx = width/2, cy = height/2; const r = Math.min(width,height)*0.32;
+      const cx = width/2, cy = height/2; const r = Math.min(width,height)*0.42;
       const total = data.reduce((s,d)=>s+d.value,0) || 1;
       let start = -Math.PI/2;
       data.forEach((d,i)=>{
@@ -375,7 +481,6 @@
       const pad = 30; const base = height - pad; const left = 60; const right = width - pad;
       const w = right - left; const max = Math.max(...data.map(d=>d.value), 1);
       const gap = 12; const bw = (w - gap*(data.length-1)) / data.length;
-      // eixo
       ctx.strokeStyle = '#1f2937'; ctx.beginPath(); ctx.moveTo(left, base); ctx.lineTo(right, base); ctx.stroke();
       data.forEach((d,i)=>{
         const h = (d.value/max) * (height - pad*2);
@@ -396,11 +501,11 @@
       const pieL = $('#pieLegend');
       const barL = $('#barLegend');
       const items = pieData.map((d,i)=>`<span class="item"><i class="swatch" style="background:${hsl(i,pieData.length)}"></i>${d.label}: <b>${fmt.format(d.value)}</b></span>`).join('');
-      pieL.innerHTML = items;
-      barL.innerHTML = items;
+      pieL.innerHTML = items; barL.innerHTML = items;
     }
 
     function renderCharts(){
+      sizeCanvases();
       const filtered = applyFilters(state.transactions);
       const data = topExpensesAgg(filtered, 5);
       drawPie($('#pieCanvas'), data);
@@ -411,16 +516,15 @@
     // Eventos UI
     $('#txForm').addEventListener('submit', addTx);
     $('#txTable').addEventListener('click', onTableClick);
-    $('#btnExportCsv').addEventListener('click', ()=>{
-      const filtered = applyFilters(state.transactions);
-      download('movimentacoes.csv', toCSV(filtered), 'text/csv;charset=utf-8');
-    });
+    $('#btnExportXls').addEventListener('click', exportXLS);
+    $('#importXls').addEventListener('change', (e)=>{ const f=e.target.files?.[0]; if(f) importFromFile(f); e.target.value=''; });
 
     $('#year').addEventListener('change', e=>{ state.filters.year = e.target.value; renderAll(); });
     $('#month').addEventListener('change', e=>{ state.filters.month = e.target.value; renderAll(); });
     $('#fCat').addEventListener('change', e=>{ state.filters.category = e.target.value; renderAll(); });
     $('#fMethod').addEventListener('change', e=>{ state.filters.method = e.target.value; renderAll(); });
     $('#search').addEventListener('input', e=>{ state.filters.search = e.target.value; renderAll(); });
+    window.addEventListener('resize', renderCharts);
 
     function renderAll(){
       initYear();
