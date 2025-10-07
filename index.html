@@ -5,11 +5,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Controle Financeiro</title>
   <link rel="stylesheet" href="styles.css" />
+  <!-- Evita 404 do favicon -->
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32'%3E%3Crect width='100%25' height='100%25' rx='6' ry='6' fill='%230f172a'/%3E%3Ctext x='50%25' y='62%25' dominant-baseline='middle' text-anchor='middle' fill='%23e5e7eb' font-size='18' font-family='Arial,Helvetica,sans-serif'%3EFR%3C/text%3E%3C/svg%3E" />
+  <style>
+    /* Pequenos estilos extras para gráficos */
+    .charts { display:grid; gap:16px; grid-template-columns: 1fr; margin-top:16px; }
+    @media (min-width: 900px){ .charts { grid-template-columns: 1fr 1fr; } }
+    canvas { width: 100%; height: 340px; border: 1px dashed var(--border); border-radius: 12px; background: #0b1220; }
+    .legend { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+    .legend .item { display:inline-flex; align-items:center; gap:6px; font-size:12px; color: var(--muted); padding:6px 8px; border:1px solid var(--border); border-radius: 999px; }
+    .swatch { width:10px; height:10px; border-radius:2px; display:inline-block; }
+  </style>
 </head>
 <body>
   <header>
     <h1>Controle Financeiro</h1>
-    <div class="sub">Cadastre receitas e despesas, filtre por mês e acompanhe seu saldo. Os dados ficam salvos no seu navegador (localStorage).</div>
+    <div class="sub">Cadastre receitas e despesas, filtre por <b>ano e mês</b>, veja os maiores gastos em gráficos e exporte CSV. Tudo salvo localmente (localStorage).</div>
   </header>
 
   <div class="container">
@@ -36,10 +47,7 @@
             </div>
             <div class="col-3">
               <label for="category">Categoria</label>
-              <div class="inline">
-                <select id="category" required></select>
-                <input id="newCat" type="text" placeholder="Adicionar categoria (opcional)" />
-              </div>
+              <select id="category" required></select>
             </div>
             <div class="col-3">
               <label for="method">Forma de pagamento</label>
@@ -54,7 +62,7 @@
             </div>
             <div class="col-6">
               <label for="desc">Descrição</label>
-              <input id="desc" type="text" placeholder="Ex.: Supermercado, Aluguel, Bônus" />
+              <input id="desc" type="text" placeholder="Ex.: Energia, Aluguel, Uber" />
             </div>
             <div class="col-6">
               <button class="btn btn-primary" type="submit">Adicionar</button>
@@ -68,8 +76,26 @@
         <h2>Filtros & Resumo</h2>
         <div class="row">
           <div class="col-2">
+            <label for="year">Ano</label>
+            <select id="year"></select>
+          </div>
+          <div class="col-2">
             <label for="month">Mês</label>
-            <input id="month" type="month" />
+            <select id="month">
+              <option value="">Todos</option>
+              <option value="01">Jan</option>
+              <option value="02">Fev</option>
+              <option value="03">Mar</option>
+              <option value="04">Abr</option>
+              <option value="05">Mai</option>
+              <option value="06">Jun</option>
+              <option value="07">Jul</option>
+              <option value="08">Ago</option>
+              <option value="09">Set</option>
+              <option value="10">Out</option>
+              <option value="11">Nov</option>
+              <option value="12">Dez</option>
+            </select>
           </div>
           <div class="col-2">
             <label for="fCat">Categoria</label>
@@ -78,7 +104,7 @@
             </select>
           </div>
           <div class="col-2">
-            <label for="fMethod">Forma de pagamento</label>
+            <label for="fMethod">Forma</label>
             <select id="fMethod">
               <option value="">Todas</option>
               <option>PIX</option>
@@ -89,9 +115,13 @@
               <option>DÉBITO AUTOMÁTICO</option>
             </select>
           </div>
-          <div class="col-6">
+          <div class="col-2">
             <label for="search">Busca</label>
             <input id="search" type="text" placeholder="Filtrar por descrição" />
+          </div>
+          <div class="col-2">
+            <label>&nbsp;</label>
+            <button id="btnExportCsv" class="btn btn-muted" type="button">Exportar CSV</button>
           </div>
         </div>
         <div class="summary" style="margin-top:12px;">
@@ -107,15 +137,6 @@
             <div class="label">Saldo</div>
             <div id="sumBalance" class="value">R$ 0,00</div>
           </div>
-        </div>
-        <div style="margin-top:12px;" class="inline">
-          <button id="btnExportCsv" class="btn btn-muted" type="button">Exportar CSV</button>
-          <button id="btnExportJson" class="btn btn-muted" type="button">Exportar JSON</button>
-          <label class="btn btn-muted" style="display:inline-flex; align-items:center; justify-content:center; cursor:pointer;">
-            Importar JSON
-            <input id="importFile" class="hidden" type="file" accept="application/json" />
-          </label>
-          <button id="btnReset" class="btn btn-danger" type="button" title="Apaga todas as movimentações">Limpar tudo</button>
         </div>
       </section>
     </div>
@@ -140,6 +161,21 @@
         </table>
       </div>
     </section>
+
+    <!-- Gráficos -->
+    <section class="card" style="margin-top:16px;">
+      <h2>Maiores gastos (gráficos)</h2>
+      <div class="charts">
+        <div>
+          <canvas id="pieCanvas" width="600" height="340"></canvas>
+          <div id="pieLegend" class="legend"></div>
+        </div>
+        <div>
+          <canvas id="barCanvas" width="600" height="340"></canvas>
+          <div id="barLegend" class="legend"></div>
+        </div>
+      </div>
+    </section>
   </div>
 
   <footer>
@@ -147,21 +183,19 @@
   </footer>
 
   <script>
-    const storeKey = 'cf_transactions_v2';
+    const storeKey = 'cf_transactions_v3';
     const $ = (s) => document.querySelector(s);
 
-    const state = {
-      transactions: [], // {id, type, date, category, method, desc, amountCents}
-      filters: { month: '', category: '', method: '', search: '' }
-    };
-
-    // Listas fixas
     const CATEGORY_LIST = [
       'ÁGUA','ALMOÇO','ALTOQI','ANIVERSÁRIO','ART','AUTODESK','CARRO','COMPRA TECNOLOGIA','CONSULTORIA ESPECIALIZADA','CUSTO ADM','DESPESAS','DESPESAS CARTÕES','ENERGIA','ENTRADA','FOLHA SALARIAL','GASOLINA','JANTAR','LIMPEZA','MANUTENÇÃO','TARIFA SICOOB','TERCEIRIZADO','UBER'
     ];
-    const METHOD_LIST = ['PIX','CARTÃO DE DÉBITO','CARTÃO DE CRÉDITO','BOLETO','TED','DÉBITO AUTOMÁTICO'];
 
-    // Utilidades
+    const state = {
+      transactions: [], // {id,type,date,category,method,desc,amountCents}
+      filters: { year: '', month: '', category: '', method: '', search: '' }
+    };
+
+    // Utils
     const fmt = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
     const parseAmount = (v) => Math.round(Number(String(v).replace(',', '.')) * 100);
     const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -172,39 +206,35 @@
       catch { state.transactions = []; }
     }
 
-    function ensureMonth(){
-      const m = $('#month');
-      if(!m.value){
-        const d = new Date();
-        const ym = d.toISOString().slice(0,7);
-        m.value = ym;
-        state.filters.month = ym;
-      }
-    }
-
-    function categories(){
-      // Fixa nas fornecidas, mas permite incluir novas via campo opcional
-      const base = new Set(CATEGORY_LIST);
-      state.transactions.forEach(t => base.add(t.category));
-      return Array.from(base).sort((a,b)=>a.localeCompare(b,'pt-BR'));
-    }
-
-    function refreshCategoryFilters(){
-      const fCat = $('#fCat');
-      fCat.innerHTML = '<option value="">Todas</option>' + categories().map(c=>`<option>${c}</option>`).join('');
-      if(state.filters.category){ fCat.value = state.filters.category; }
+    function initCategorySelects(){
       const catSel = $('#category');
-      catSel.innerHTML = categories().map(c=>`<option>${c}</option>`).join('');
+      catSel.innerHTML = CATEGORY_LIST.map(c=>`<option>${c}</option>`).join('');
+      const fCat = $('#fCat');
+      fCat.innerHTML = '<option value="">Todas</option>' + CATEGORY_LIST.map(c=>`<option>${c}</option>`).join('');
+    }
+
+    function initYear(){
+      const y = $('#year');
+      const years = new Set();
+      const nowY = new Date().getFullYear();
+      years.add(nowY);
+      state.transactions.forEach(t=> years.add(Number(t.date.slice(0,4))));
+      const list = Array.from(years).sort((a,b)=>b-a);
+      y.innerHTML = list.map(v=>`<option value="${v}">${v}</option>`).join('');
+      state.filters.year = String(list[0] || nowY);
+      y.value = state.filters.year;
     }
 
     function applyFilters(list){
-      const { month, category, method, search } = state.filters;
-      return list.filter(t => {
-        const inMonth = month ? t.date.startsWith(month) : true;
-        const inCat = category ? t.category === category : true;
-        const inMethod = method ? t.method === method : true;
-        const inSearch = search ? (t.desc || '').toLowerCase().includes(search.toLowerCase()) : true;
-        return inMonth && inCat && inMethod && inSearch;
+      const { year, month, category, method, search } = state.filters;
+      return list.filter(t=>{
+        const [y,m] = t.date.split('-');
+        const byYear = year ? y === String(year) : true;
+        const byMonth = month ? m === month : true;
+        const byCat = category ? t.category === category : true;
+        const byMethod = method ? t.method === method : true;
+        const bySearch = search ? (t.desc||'').toLowerCase().includes(search.toLowerCase()) : true;
+        return byYear && byMonth && byCat && byMethod && bySearch;
       });
     }
 
@@ -216,8 +246,7 @@
       $('#sumBalance').textContent = fmt.format((inc-exp)/100);
     }
 
-    function render(){
-      refreshCategoryFilters();
+    function renderTable(){
       const body = $('#txBody');
       body.innerHTML = '';
       const filtered = applyFilters(state.transactions).sort((a,b)=> b.date.localeCompare(a.date));
@@ -228,14 +257,13 @@
           <td>${t.date.split('-').reverse().join('/')}</td>
           <td><span class="chip ${chipClass}">${t.type==='income'?'Receita':'Despesa'}</span></td>
           <td>${escapeHtml(t.category)}</td>
-          <td>${escapeHtml(t.method || '')}</td>
-          <td>${escapeHtml(t.desc || '')}</td>
+          <td>${escapeHtml(t.method||'')}</td>
+          <td>${escapeHtml(t.desc||'')}</td>
           <td class="right">${fmt.format(t.amountCents/100)}</td>
           <td class="right actions">
             <button class="btn btn-muted" data-edit="${t.id}">Editar</button>
             <button class="btn btn-danger" data-del="${t.id}">Excluir</button>
-          </td>
-        `;
+          </td>`;
         body.appendChild(tr);
       }
       summarize(filtered);
@@ -249,18 +277,15 @@
       const type = $('#type').value;
       const date = $('#date').value || new Date().toISOString().slice(0,10);
       const amountCents = parseAmount($('#amount').value || 0);
-      let category = $('#category').value;
-      const newCat = $('#newCat').value.trim();
-      if(newCat){ category = newCat; $('#newCat').value=''; }
+      const category = $('#category').value;
       const method = $('#method').value;
       const desc = $('#desc').value.trim();
       if(!amountCents){ alert('Informe um valor válido.'); return; }
       const tx = { id: uid(), type, date, category, method, desc, amountCents };
       state.transactions.push(tx);
       save();
-      (e.target).reset();
-      ensureMonth();
-      render();
+      e.target.reset();
+      renderAll();
     }
 
     function onTableClick(e){
@@ -269,7 +294,7 @@
       if(delId){
         if(confirm('Excluir esta movimentação?')){
           state.transactions = state.transactions.filter(t=>t.id!==delId);
-          save(); render();
+          save(); renderAll();
         }
       }
       if(editId){
@@ -286,20 +311,19 @@
           alert('Dados inválidos. Edição cancelada.'); return;
         }
         Object.assign(t, { desc, amountCents, category, method, date, type });
-        save(); render();
+        save(); renderAll();
       }
     }
 
-    // Export / Import
+    // CSV
     function download(filename, content, mime){
       const a = document.createElement('a');
       a.href = URL.createObjectURL(new Blob([content], { type: mime }));
       a.download = filename; a.click();
       setTimeout(()=>URL.revokeObjectURL(a.href), 5000);
     }
-
     function toCSV(list){
-      const header = ['id','tipo','data','categoria','forma_pagamento','descricao','valor'];
+      const header = ['id','tipo','data','categoria','forma','descricao','valor'];
       const rows = list.map(t=>[
         t.id,
         t.type,
@@ -312,64 +336,103 @@
       return header.join(',')+'\n'+rows.join('\n');
     }
 
+    // Gráficos
+    function hsl(i,n){ return `hsl(${Math.round(360*i/n)}, 70%, 55%)`; }
+
+    function topExpensesAgg(list, topN=5){
+      const map = new Map();
+      list.filter(t=>t.type==='expense').forEach(t=>{
+        map.set(t.category, (map.get(t.category)||0) + t.amountCents);
+      });
+      const arr = Array.from(map.entries()).sort((a,b)=>b[1]-a[1]);
+      const top = arr.slice(0, topN);
+      const othersSum = arr.slice(topN).reduce((s, [,v])=>s+v, 0);
+      if(othersSum>0) top.push(['Outros', othersSum]);
+      return top.map(([k,v])=>({label:k, value:v/100}));
+    }
+
+    function drawPie(canvas, data){
+      const ctx = canvas.getContext('2d');
+      const { width, height } = canvas;
+      ctx.clearRect(0,0,width,height);
+      const cx = width/2, cy = height/2; const r = Math.min(width,height)*0.32;
+      const total = data.reduce((s,d)=>s+d.value,0) || 1;
+      let start = -Math.PI/2;
+      data.forEach((d,i)=>{
+        const ang = (d.value/total)*Math.PI*2;
+        ctx.beginPath(); ctx.moveTo(cx,cy);
+        ctx.arc(cx,cy,r,start,start+ang);
+        ctx.closePath(); ctx.fillStyle = hsl(i,data.length);
+        ctx.fill();
+        start += ang;
+      });
+    }
+
+    function drawBars(canvas, data){
+      const ctx = canvas.getContext('2d');
+      const { width, height } = canvas;
+      ctx.clearRect(0,0,width,height);
+      const pad = 30; const base = height - pad; const left = 60; const right = width - pad;
+      const w = right - left; const max = Math.max(...data.map(d=>d.value), 1);
+      const gap = 12; const bw = (w - gap*(data.length-1)) / data.length;
+      // eixo
+      ctx.strokeStyle = '#1f2937'; ctx.beginPath(); ctx.moveTo(left, base); ctx.lineTo(right, base); ctx.stroke();
+      data.forEach((d,i)=>{
+        const h = (d.value/max) * (height - pad*2);
+        const x = left + i*(bw+gap);
+        const y = base - h;
+        ctx.fillStyle = hsl(i,data.length);
+        ctx.fillRect(x, y, bw, h);
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '12px system-ui, -apple-system, Segoe UI, Roboto, Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(d.label.length>10? d.label.slice(0,10)+'…' : d.label, x + bw/2, base + 14);
+        ctx.textAlign = 'right';
+        ctx.fillText(fmt.format(d.value), x + bw, y - 4);
+      });
+    }
+
+    function renderLegends(pieData){
+      const pieL = $('#pieLegend');
+      const barL = $('#barLegend');
+      const items = pieData.map((d,i)=>`<span class="item"><i class="swatch" style="background:${hsl(i,pieData.length)}"></i>${d.label}: <b>${fmt.format(d.value)}</b></span>`).join('');
+      pieL.innerHTML = items;
+      barL.innerHTML = items;
+    }
+
+    function renderCharts(){
+      const filtered = applyFilters(state.transactions);
+      const data = topExpensesAgg(filtered, 5);
+      drawPie($('#pieCanvas'), data);
+      drawBars($('#barCanvas'), data);
+      renderLegends(data);
+    }
+
     // Eventos UI
     $('#txForm').addEventListener('submit', addTx);
     $('#txTable').addEventListener('click', onTableClick);
-
-    $('#month').addEventListener('input', e=>{ state.filters.month = e.target.value; render(); });
-    $('#fCat').addEventListener('change', e=>{ state.filters.category = e.target.value; render(); });
-    $('#fMethod').addEventListener('change', e=>{ state.filters.method = e.target.value; render(); });
-    $('#search').addEventListener('input', e=>{ state.filters.search = e.target.value; render(); });
-
     $('#btnExportCsv').addEventListener('click', ()=>{
       const filtered = applyFilters(state.transactions);
       download('movimentacoes.csv', toCSV(filtered), 'text/csv;charset=utf-8');
     });
-    $('#btnExportJson').addEventListener('click', ()=>{
-      const filtered = applyFilters(state.transactions);
-      download('movimentacoes.json', JSON.stringify(filtered, null, 2), 'application/json');
-    });
-    $('#importFile').addEventListener('change', async (e)=>{
-      const file = e.target.files?.[0]; if(!file) return;
-      const text = await file.text();
-      try{
-        const arr = JSON.parse(text);
-        if(!Array.isArray(arr)) throw new Error('Formato inválido');
-        const ids = new Set(state.transactions.map(t=>t.id));
-        arr.forEach(x=>{
-          if(!x || typeof x!=='object') return;
-          const t = {
-            id: x.id || uid(),
-            type: x.type==='income'?'income':'expense',
-            date: /^\d{4}-\d{2}-\d{2}$/.test(x.date?String(x.date):'') ? x.date : new Date().toISOString().slice(0,10),
-            category: String(x.category||x.categoria||'Outros'),
-            method: String(x.method||x.forma_pagamento||'PIX'),
-            desc: String(x.desc||x.descricao||''),
-            amountCents: Number.isFinite(x.amountCents) ? x.amountCents : parseAmount(x.valor||0)
-          };
-          if(!ids.has(t.id)){ state.transactions.push(t); ids.add(t.id); }
-        });
-        save(); render();
-        alert('Importação concluída.');
-      }catch(err){ alert('Falha ao importar: '+ err.message); }
-      e.target.value = '';
-    });
 
-    $('#btnReset').addEventListener('click', ()=>{
-      if(confirm('Tem certeza? Isso apagará todas as movimentações salvas.')){
-        state.transactions = []; save(); render();
-      }
-    });
+    $('#year').addEventListener('change', e=>{ state.filters.year = e.target.value; renderAll(); });
+    $('#month').addEventListener('change', e=>{ state.filters.month = e.target.value; renderAll(); });
+    $('#fCat').addEventListener('change', e=>{ state.filters.category = e.target.value; renderAll(); });
+    $('#fMethod').addEventListener('change', e=>{ state.filters.method = e.target.value; renderAll(); });
+    $('#search').addEventListener('input', e=>{ state.filters.search = e.target.value; renderAll(); });
+
+    function renderAll(){
+      initYear();
+      renderTable();
+      renderCharts();
+    }
 
     // Inicialização
     load();
-    ensureMonth();
-    // Preenche selects iniciais
-    (function initCategorySelect(){
-      const catSel = $('#category');
-      catSel.innerHTML = categories().map(c=>`<option>${c}</option>`).join('');
-    })();
-    render();
+    initCategorySelects();
+    initYear();
+    renderAll();
   </script>
 </body>
 </html>
